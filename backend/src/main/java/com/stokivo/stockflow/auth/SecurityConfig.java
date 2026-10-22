@@ -63,7 +63,8 @@ public class SecurityConfig {
 						.requestMatchers("/api/inventory/**").hasRole("ADMINISTRATOR")
 						.requestMatchers("/api/dashboard/**").hasRole("ADMINISTRATOR")
 						.requestMatchers("/api/users/**").hasRole("ADMINISTRATOR")
-						.requestMatchers("/api/**").authenticated())
+						.requestMatchers("/api/**").authenticated()
+						.anyRequest().permitAll())
 				.addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
 		return http.build();
 	}

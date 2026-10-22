@@ -39,14 +39,15 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 			filterChain.doFilter(request, response);
 			return;
 		}
-		String username = jwtService.username(header.substring(7).trim());
+		String token = header.substring(7).trim();
+		String username = jwtService.username(token);
 		if (username == null) {
 			SecurityResponses.write(response, HttpServletResponse.SC_UNAUTHORIZED, "Sign in again.");
 			return;
 		}
 		User user = users.findByUsernameIgnoreCase(username).orElse(null);
-		if (user == null || !user.isActive()) {
-			String message = user == null ? "Sign in again." : "This account is deactivated.";
+		if (user == null || !user.isActive() || jwtService.credentialsVersion(token) != user.getCredentialsVersion()) {
+			String message = user != null && !user.isActive() ? "This account is deactivated." : "Sign in again.";
 			SecurityResponses.write(response, HttpServletResponse.SC_UNAUTHORIZED, message);
 			return;
 		}

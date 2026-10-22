@@ -79,7 +79,7 @@ export default function Dashboard() {
       <PageHeader
         eyebrow="Dashboard"
         title="How the shop is doing."
-        text="Totals come from saved sales. Today's cards stay on today even when the chart covers a longer period."
+        text="Totals come from saved sales, with returns taken off. Today's cards stay on today even when the chart covers a longer period."
       >
         <div className="row">
           {periods.map((item) => (

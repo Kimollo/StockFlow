@@ -19,11 +19,12 @@ The pictures are from a shop that already has stock and sales. A fresh database 
 - Products have a unique SKU, a category, a selling price, a cost price, and a minimum stock level. Deactivating a product keeps it on old receipts.
 - Stock changes are receipts or adjustments, each with a reason. A sale deducts stock in the same transaction as the receipt. Stock cannot go below zero.
 - Checkout sends the product and the quantity. The server stores the selling price at that moment and ignores any price sent by the browser.
+- A return puts that quantity back on the shelf. The original receipt keeps the quantity and price that were charged, and the dashboard totals leave the returned amount out.
 - The dashboard shows today's total, a period chart, best sellers, and products that need restocking. Administrators can download the period as CSV.
 
 ## Roles
 
-An **administrator** manages products, categories, receipts, adjustments, every sale, the dashboard, and staff accounts.
+An **administrator** manages products, categories, receipts, adjustments, every sale, returns, the dashboard, and staff accounts, including a new password for an account.
 
 **Staff** can look up products, check out, and see only the sales they completed. They cannot change prices, receive or adjust stock, see cost prices, open the dashboard, or manage accounts. Those limits are enforced on the API.
 

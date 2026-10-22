@@ -60,4 +60,13 @@ public class UserService {
 		user.setActive(active);
 		return UserResponse.from(user);
 	}
+
+	@Transactional
+	public UserResponse changePassword(Long id, String password) {
+		User user = users.findById(id)
+				.orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "User not found."));
+		user.setPasswordHash(passwordEncoder.encode(password));
+		user.setCredentialsVersion(user.getCredentialsVersion() + 1);
+		return UserResponse.from(user);
+	}
 }

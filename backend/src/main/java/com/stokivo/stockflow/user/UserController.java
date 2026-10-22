@@ -39,4 +39,9 @@ public class UserController {
 	public UserResponse changeStatus(@PathVariable Long id, @Valid @RequestBody UserStatusRequest request) {
 		return userService.changeStatus(id, request.active());
 	}
+
+	@PatchMapping("/{id}/password")
+	public UserResponse changePassword(@PathVariable Long id, @Valid @RequestBody PasswordRequest request) {
+		return userService.changePassword(id, request.password());
+	}
 }

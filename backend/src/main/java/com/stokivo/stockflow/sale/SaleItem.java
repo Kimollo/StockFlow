@@ -39,6 +39,9 @@ public class SaleItem {
 	@Column(nullable = false)
 	private int quantity;
 
+	@Column(name = "returned_quantity", nullable = false)
+	private int returnedQuantity;
+
 	@Column(name = "unit_price", nullable = false, precision = 12, scale = 2)
 	private BigDecimal unitPrice;
 
@@ -87,6 +90,14 @@ public class SaleItem {
 
 	public void setQuantity(int quantity) {
 		this.quantity = quantity;
+	}
+
+	public int getReturnedQuantity() {
+		return returnedQuantity;
+	}
+
+	public void setReturnedQuantity(int returnedQuantity) {
+		this.returnedQuantity = returnedQuantity;
 	}
 
 	public BigDecimal getUnitPrice() {

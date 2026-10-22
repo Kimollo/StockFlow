@@ -270,6 +270,56 @@ class SaleApiTest extends EmbeddedPostgresSupport {
 				.andExpect(jsonPath("$.stockQuantity").value(5));
 	}
 
+	@Test
+	void returnRestocksAndLeavesTheReceiptUnchanged() throws Exception {
+		long categoryId = createCategory("Bakery");
+		long rollId = createProduct(categoryId, "ROLL-1", "Roll", "8.00", "3.00", 4, 1);
+
+		String saleBody = mockMvc.perform(post("/api/sales")
+						.contentType(MediaType.APPLICATION_JSON)
+						.content("""
+								{"paymentMethod": "CASH", "items": [{"productId": %d, "quantity": 2}]}
+								""".formatted(rollId)))
+				.andExpect(status().isCreated())
+				.andReturn()
+				.getResponse()
+				.getContentAsString();
+		long saleId = ((Number) JsonPath.read(saleBody, "$.id")).longValue();
+		long itemId = ((Number) JsonPath.read(saleBody, "$.items[0].id")).longValue();
+
+		mockMvc.perform(post("/api/sales/{id}/returns", saleId)
+						.contentType(MediaType.APPLICATION_JSON)
+						.content("""
+								{"items": [{"saleItemId": %d, "quantity": 1}]}
+								""".formatted(itemId)))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.total").value(16.00))
+				.andExpect(jsonPath("$.items[0].quantity").value(2))
+				.andExpect(jsonPath("$.items[0].lineTotal").value(16.00))
+				.andExpect(jsonPath("$.items[0].returnedQuantity").value(1));
+
+		mockMvc.perform(get("/api/products/{id}", rollId))
+				.andExpect(jsonPath("$.stockQuantity").value(3));
+		mockMvc.perform(get("/api/inventory/movements").param("productId", String.valueOf(rollId)))
+				.andExpect(jsonPath("$.content[0].type").value("RETURN"))
+				.andExpect(jsonPath("$.content[0].quantityChange").value(1))
+				.andExpect(jsonPath("$.content[0].saleId").value(saleId));
+		mockMvc.perform(get("/api/dashboard/summary"))
+				.andExpect(jsonPath("$.todayTotal").value(8.00))
+				.andExpect(jsonPath("$.todayCount").value(1));
+
+		mockMvc.perform(post("/api/sales/{id}/returns", saleId)
+						.contentType(MediaType.APPLICATION_JSON)
+						.content("""
+								{"items": [{"saleItemId": %d, "quantity": 2}]}
+								""".formatted(itemId)))
+				.andExpect(status().isConflict())
+				.andExpect(jsonPath("$.message").value("Only 1 of Roll can still be returned."));
+
+		mockMvc.perform(get("/api/products/{id}", rollId))
+				.andExpect(jsonPath("$.stockQuantity").value(3));
+	}
+
 	private long createCategory(String name) throws Exception {
 		String body = mockMvc.perform(post("/api/categories")
 						.contentType(MediaType.APPLICATION_JSON)

@@ -41,4 +41,9 @@ public class SaleController {
 	public SaleResponse checkout(@Valid @RequestBody SaleRequest request) {
 		return saleService.checkout(request);
 	}
+
+	@PostMapping("/{id}/returns")
+	public SaleResponse returnItems(@PathVariable Long id, @Valid @RequestBody ReturnRequest request) {
+		return saleService.returnItems(id, request);
+	}
 }

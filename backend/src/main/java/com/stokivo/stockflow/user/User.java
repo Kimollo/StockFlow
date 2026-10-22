@@ -37,6 +37,9 @@ public class User {
 	@Column(nullable = false)
 	private boolean active = true;
 
+	@Column(name = "credentials_version", nullable = false)
+	private int credentialsVersion;
+
 	@Column(name = "created_at", nullable = false)
 	private Instant createdAt;
 
@@ -97,6 +100,14 @@ public class User {
 
 	public void setActive(boolean active) {
 		this.active = active;
+	}
+
+	public int getCredentialsVersion() {
+		return credentialsVersion;
+	}
+
+	public void setCredentialsVersion(int credentialsVersion) {
+		this.credentialsVersion = credentialsVersion;
 	}
 
 	public Instant getCreatedAt() {

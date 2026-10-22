@@ -112,7 +112,8 @@ export default function App() {
       <main>
         {current === 'products' && <Products canManage={admin} />}
         {current === 'sales' && <Sales ownOnly={!admin} />}
-        {current !== 'products' && current !== 'sales' && <Current />}
+        {current === 'staff' && <Staff currentUserId={session.user.id} />}
+        {current !== 'products' && current !== 'sales' && current !== 'staff' && <Current />}
       </main>
     </div>
   )

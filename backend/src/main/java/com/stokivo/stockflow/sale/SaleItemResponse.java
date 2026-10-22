@@ -8,6 +8,7 @@ public record SaleItemResponse(
 		String sku,
 		String productName,
 		int quantity,
+		int returnedQuantity,
 		BigDecimal unitPrice,
 		BigDecimal lineTotal
 ) {

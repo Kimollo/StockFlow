@@ -4,6 +4,8 @@ import { Banner, PageHeader } from '../ui.jsx'
 
 export default function Checkout() {
   const [search, setSearch] = useState('')
+  const [page, setPage] = useState(0)
+  const [totalPages, setTotalPages] = useState(0)
   const [matches, setMatches] = useState([])
   const [cart, setCart] = useState([])
   const [paymentMethod, setPaymentMethod] = useState('CASH')
@@ -14,9 +16,10 @@ export default function Checkout() {
   useEffect(() => {
     let cancelled = false
     loadMatches(search)
-      .then((content) => {
+      .then((body) => {
         if (!cancelled) {
-          setMatches(content)
+          setMatches(body.content)
+          setTotalPages(body.totalPages)
         }
       })
       .catch((err) => {
@@ -27,14 +30,14 @@ export default function Checkout() {
     return () => {
       cancelled = true
     }
-  }, [search])
+  }, [search, page])
 
   function loadMatches(query) {
-    const params = new URLSearchParams({ size: '8', active: 'true' })
+    const params = new URLSearchParams({ page: String(page), size: '8', active: 'true' })
     if (query.trim()) {
       params.set('search', query.trim())
     }
-    return api(`/api/products?${params}`).then((body) => body.content)
+    return api(`/api/products?${params}`)
   }
 
   function add(product) {
@@ -87,14 +90,17 @@ export default function Checkout() {
       })
       setReceipt(sale)
       setCart([])
-      setMatches(await loadMatches(search))
+      const body = await loadMatches(search)
+      setMatches(body.content)
+      setTotalPages(body.totalPages)
     } catch (err) {
       setError(err)
-      const content = await loadMatches(search).catch(() => null)
-      if (content) {
-        setMatches(content)
+      const body = await loadMatches(search).catch(() => null)
+      if (body) {
+        setMatches(body.content)
+        setTotalPages(body.totalPages)
         setCart((current) => current.flatMap((line) => {
-          const fresh = content.find((item) => item.id === line.productId)
+          const fresh = body.content.find((item) => item.id === line.productId)
           if (!fresh || fresh.outOfStock) {
             return []
           }
@@ -123,7 +129,7 @@ export default function Checkout() {
         <div className="panel">
           <label>
             Add a product
-            <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Name or SKU" />
+            <input value={search} onChange={(event) => { setPage(0); setSearch(event.target.value) }} placeholder="Name or SKU" />
           </label>
           <div className="choice-list">
             {matches.map((product) => (
@@ -140,6 +146,13 @@ export default function Checkout() {
             ))}
             {matches.length === 0 && <p className="muted">No active products match that search.</p>}
           </div>
+          {totalPages > 1 && (
+            <div className="row">
+              <button type="button" className="ghost" disabled={page === 0} onClick={() => setPage((current) => current - 1)}>Previous</button>
+              <span className="muted">Page {page + 1} of {totalPages}</span>
+              <button type="button" className="ghost" disabled={page + 1 >= totalPages} onClick={() => setPage((current) => current + 1)}>Next</button>
+            </div>
+          )}
         </div>
         <form className="panel" onSubmit={complete}>
           <h3>Cart</h3>
@@ -199,7 +212,10 @@ export function Receipt({ sale }) {
             {sale.items.map((item) => (
               <tr key={item.id}>
                 <td>{item.productName}<span className="sku">{item.sku}</span></td>
-                <td>{item.quantity}</td>
+                <td>
+                  {item.quantity}
+                  {item.returnedQuantity > 0 && <span className="sku">{item.returnedQuantity} returned</span>}
+                </td>
                 <td>{money(item.unitPrice)}</td>
                 <td>{money(item.lineTotal)}</td>
               </tr>

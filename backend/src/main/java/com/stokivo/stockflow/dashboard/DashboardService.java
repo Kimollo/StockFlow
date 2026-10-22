@@ -40,10 +40,10 @@ public class DashboardService {
 	public DashboardSummary summary(LocalDate from, LocalDate to) {
 		DateRange period = range(from, to);
 		List<Sale> sales = salesBetween(period.start(), period.end());
-		BigDecimal periodTotal = money(sales.stream().map(Sale::getTotal).reduce(BigDecimal.ZERO, BigDecimal::add));
+		BigDecimal periodTotal = money(sales.stream().map(this::net).reduce(BigDecimal.ZERO, BigDecimal::add));
 		LocalDate today = LocalDate.now(zone);
 		List<Sale> todaysSales = salesBetween(today, today);
-		BigDecimal todayTotal = money(todaysSales.stream().map(Sale::getTotal).reduce(BigDecimal.ZERO, BigDecimal::add));
+		BigDecimal todayTotal = money(todaysSales.stream().map(this::net).reduce(BigDecimal.ZERO, BigDecimal::add));
 		return new DashboardSummary(
 				period.start(),
 				period.end(),
@@ -62,7 +62,7 @@ public class DashboardService {
 		Map<LocalDate, Long> counts = new LinkedHashMap<>();
 		for (Sale sale : salesBetween(period.start(), period.end())) {
 			LocalDate day = sale.getSoldAt().atZone(zone).toLocalDate();
-			totals.merge(day, sale.getTotal(), BigDecimal::add);
+			totals.merge(day, net(sale), BigDecimal::add);
 			counts.merge(day, 1L, Long::sum);
 		}
 		List<SalesTrendPoint> points = new ArrayList<>();
@@ -82,12 +82,16 @@ public class DashboardService {
 		Map<Long, ProductTotal> totals = new LinkedHashMap<>();
 		for (Sale sale : salesBetween(period.start(), period.end())) {
 			for (SaleItem item : sale.getItems()) {
+				int remaining = item.getQuantity() - item.getReturnedQuantity();
+				if (remaining == 0) {
+					continue;
+				}
 				ProductTotal total = totals.computeIfAbsent(item.getProduct().getId(), id -> new ProductTotal(
 						id,
 						item.getProduct().getSku(),
 						item.getProduct().getName()));
-				total.quantity += item.getQuantity();
-				total.revenue = total.revenue.add(item.getLineTotal());
+				total.quantity += remaining;
+				total.revenue = total.revenue.add(item.getUnitPrice().multiply(BigDecimal.valueOf(remaining)));
 			}
 		}
 		List<TopProduct> products = totals.values().stream()
@@ -108,7 +112,7 @@ public class DashboardService {
 	public ResponseEntity<String> export(LocalDate from, LocalDate to) {
 		DateRange period = range(from, to);
 		StringBuilder csv = new StringBuilder();
-		csv.append("sale_number,sold_at,payment_method,sku,product_name,quantity,unit_price,line_total,sale_total\n");
+		csv.append("sale_number,sold_at,payment_method,sku,product_name,quantity,unit_price,line_total,sale_total,returned_quantity\n");
 		List<Sale> sales = salesBetween(period.start(), period.end());
 		sales.sort(Comparator.comparing(Sale::getSoldAt).thenComparing(Sale::getId).reversed());
 		for (Sale sale : sales) {
@@ -121,7 +125,8 @@ public class DashboardService {
 						.append(item.getQuantity()).append(',')
 						.append(money(item.getUnitPrice())).append(',')
 						.append(money(item.getLineTotal())).append(',')
-						.append(money(sale.getTotal()))
+						.append(money(sale.getTotal())).append(',')
+						.append(item.getReturnedQuantity())
 						.append('\n');
 			}
 		}
@@ -150,6 +155,15 @@ public class DashboardService {
 
 	private Instant startOf(LocalDate date) {
 		return date.atStartOfDay(zone).toInstant();
+	}
+
+	private BigDecimal net(Sale sale) {
+		BigDecimal total = BigDecimal.ZERO;
+		for (SaleItem item : sale.getItems()) {
+			int remaining = item.getQuantity() - item.getReturnedQuantity();
+			total = total.add(item.getUnitPrice().multiply(BigDecimal.valueOf(remaining)));
+		}
+		return money(total);
 	}
 
 	private BigDecimal money(BigDecimal amount) {

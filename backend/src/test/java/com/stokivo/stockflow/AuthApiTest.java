@@ -135,6 +135,26 @@ class AuthApiTest extends EmbeddedPostgresSupport {
 				.andExpect(jsonPath("$.totalElements").value(1))
 				.andExpect(jsonPath("$.content[0].id").value(staffSaleId))
 				.andExpect(jsonPath("$.content[0].cashierName").value("Asha"));
+		int staffItemId = JsonPath.read(staffSale, "$.items[0].id");
+		mockMvc.perform(post("/api/sales/" + staffSaleId + "/returns")
+						.header("Authorization", "Bearer " + staffToken)
+						.contentType(MediaType.APPLICATION_JSON)
+						.content("""
+								{"items": [{"saleItemId": %d, "quantity": 1}]}
+								""".formatted(staffItemId)))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.items[0].quantity").value(1))
+				.andExpect(jsonPath("$.items[0].returnedQuantity").value(1));
+		int adminItemId = JsonPath.read(adminSale, "$.items[0].id");
+		mockMvc.perform(post("/api/sales/" + adminSaleId + "/returns")
+						.header("Authorization", "Bearer " + staffToken)
+						.contentType(MediaType.APPLICATION_JSON)
+						.content("""
+								{"items": [{"saleItemId": %d, "quantity": 1}]}
+								""".formatted(adminItemId)))
+				.andExpect(status().isForbidden())
+				.andExpect(jsonPath("$.message").value("You can only return your own sales."));
+
 		mockMvc.perform(get("/api/sales/" + adminSaleId)
 						.header("Authorization", "Bearer " + staffToken))
 				.andExpect(status().isForbidden())
@@ -160,6 +180,51 @@ class AuthApiTest extends EmbeddedPostgresSupport {
 						.header("Authorization", "Bearer " + staffToken))
 				.andExpect(status().isUnauthorized())
 				.andExpect(jsonPath("$.message").value("This account is deactivated."));
+	}
+
+	@Test
+	void administratorCanReplaceAPasswordAndTheOldSignInStops() throws Exception {
+		String adminToken = login("admin", "stockflow");
+		String staffBody = mockMvc.perform(post("/api/users")
+						.header("Authorization", "Bearer " + adminToken)
+						.contentType(MediaType.APPLICATION_JSON)
+						.content("""
+								{
+								  "name": "Asha",
+								  "username": "asha",
+								  "password": "counter-1",
+								  "role": "STAFF"
+								}
+								"""))
+				.andExpect(status().isCreated())
+				.andReturn().getResponse().getContentAsString();
+		int staffId = JsonPath.read(staffBody, "$.id");
+		String staffToken = login("asha", "counter-1");
+
+		mockMvc.perform(patch("/api/users/" + staffId + "/password")
+						.header("Authorization", "Bearer " + staffToken)
+						.contentType(MediaType.APPLICATION_JSON)
+						.content("{\"password\": \"counter-2\"}"))
+				.andExpect(status().isForbidden());
+		mockMvc.perform(patch("/api/users/" + staffId + "/password")
+						.header("Authorization", "Bearer " + adminToken)
+						.contentType(MediaType.APPLICATION_JSON)
+						.content("{\"password\": \"counter-2\"}"))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.username").value("asha"));
+
+		mockMvc.perform(get("/api/auth/me")
+						.header("Authorization", "Bearer " + staffToken))
+				.andExpect(status().isUnauthorized())
+				.andExpect(jsonPath("$.message").value("Sign in again."));
+		mockMvc.perform(post("/api/auth/login")
+						.contentType(MediaType.APPLICATION_JSON)
+						.content("""
+								{"username": "asha", "password": "counter-1"}
+								"""))
+				.andExpect(status().isUnauthorized())
+				.andExpect(jsonPath("$.message").value("The username or password is incorrect."));
+		login("asha", "counter-2");
 	}
 
 	private String login(String username, String password) throws Exception {

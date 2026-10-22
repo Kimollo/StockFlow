@@ -4,9 +4,11 @@ import { Banner, PageHeader } from '../ui.jsx'
 
 const emptyForm = { name: '', username: '', password: '', role: 'STAFF' }
 
-export default function Staff() {
+export default function Staff({ currentUserId }) {
   const [users, setUsers] = useState(null)
   const [form, setForm] = useState(emptyForm)
+  const [passwords, setPasswords] = useState({})
+  const [notice, setNotice] = useState('')
   const [error, setError] = useState(null)
   const [saving, setSaving] = useState(false)
 
@@ -41,8 +43,28 @@ export default function Staff() {
     }
   }
 
+  async function resetPassword(event, user) {
+    event.preventDefault()
+    setError(null)
+    setNotice('')
+    try {
+      await api(`/api/users/${user.id}/password`, {
+        method: 'PATCH',
+        body: JSON.stringify({ password: passwords[user.id] || '' }),
+      })
+      setPasswords((current) => ({ ...current, [user.id]: '' }))
+      if (user.id === currentUserId) {
+        await api('/api/auth/me')
+      }
+      setNotice(`Password updated for ${user.username}. They sign in again with the new one.`)
+    } catch (err) {
+      setError(err)
+    }
+  }
+
   async function changeStatus(user) {
     setError(null)
+    setNotice('')
     try {
       await api(`/api/users/${user.id}/status`, {
         method: 'PATCH',
@@ -59,9 +81,10 @@ export default function Staff() {
       <PageHeader
         eyebrow="Staff"
         title="Who can sign in."
-        text="Deactivating an account keeps their old receipts. They cannot sign in until the account is active again."
+        text="Deactivating an account keeps their old receipts. Setting a new password signs that person out until they use it."
       />
       <Banner error={error} />
+      {notice && <p className="success">{notice}</p>}
       <section className="split">
         <form className="panel" onSubmit={create}>
           <h3>New account</h3>
@@ -91,32 +114,31 @@ export default function Staff() {
           {!users && <p className="muted">Loading accounts…</p>}
           {users?.length === 0 && <p className="muted">No accounts yet.</p>}
           {users?.length > 0 && (
-            <div className="table-wrap">
-              <table>
-                <thead>
-                  <tr>
-                    <th>Name</th>
-                    <th>Username</th>
-                    <th>Role</th>
-                    <th></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {users.map((user) => (
-                    <tr key={user.id}>
-                      <td>{user.name}</td>
-                      <td>{user.username}</td>
-                      <td>{user.role === 'ADMINISTRATOR' ? 'Administrator' : 'Staff'}{user.active ? '' : ' · inactive'}</td>
-                      <td>
-                        <button type="button" className="ghost" onClick={() => changeStatus(user)}>
-                          {user.active ? 'Deactivate' : 'Activate'}
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            <ul className="account-list">
+              {users.map((user) => (
+                <li key={user.id}>
+                  <div>
+                    <strong>{user.name}</strong>
+                    <span>{user.username} · {user.role === 'ADMINISTRATOR' ? 'Administrator' : 'Staff'}{user.active ? '' : ' · inactive'}</span>
+                  </div>
+                  <form className="password-reset" onSubmit={(event) => resetPassword(event, user)}>
+                    <input
+                      type="password"
+                      minLength={8}
+                      placeholder="New password"
+                      autoComplete="new-password"
+                      value={passwords[user.id] || ''}
+                      onChange={(event) => setPasswords((current) => ({ ...current, [user.id]: event.target.value }))}
+                      required
+                    />
+                    <button type="submit" className="ghost">Set password</button>
+                    <button type="button" className="ghost" onClick={() => changeStatus(user)}>
+                      {user.active ? 'Deactivate' : 'Activate'}
+                    </button>
+                  </form>
+                </li>
+              ))}
+            </ul>
           )}
         </section>
       </section>

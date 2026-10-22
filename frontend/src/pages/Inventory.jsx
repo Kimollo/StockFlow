@@ -4,6 +4,8 @@ import { Banner, PageHeader } from '../ui.jsx'
 
 export default function Inventory() {
   const [search, setSearch] = useState('')
+  const [productPage, setProductPage] = useState(0)
+  const [productPages, setProductPages] = useState(0)
   const [matches, setMatches] = useState([])
   const [product, setProduct] = useState(null)
   const [receiptQty, setReceiptQty] = useState('1')
@@ -12,12 +14,13 @@ export default function Inventory() {
   const [direction, setDirection] = useState('DECREASE')
   const [reason, setReason] = useState('')
   const [movements, setMovements] = useState(null)
+  const [movementPage, setMovementPage] = useState(0)
   const [error, setError] = useState(null)
   const [message, setMessage] = useState('')
 
   useEffect(() => {
     let cancelled = false
-    const params = new URLSearchParams({ size: '8', active: 'true' })
+    const params = new URLSearchParams({ page: String(productPage), size: '8', active: 'true' })
     if (search.trim()) {
       params.set('search', search.trim())
     }
@@ -25,6 +28,7 @@ export default function Inventory() {
       .then((body) => {
         if (!cancelled) {
           setMatches(body.content)
+          setProductPages(body.totalPages)
         }
       })
       .catch((err) => {
@@ -35,11 +39,11 @@ export default function Inventory() {
     return () => {
       cancelled = true
     }
-  }, [search])
+  }, [search, productPage])
 
   useEffect(() => {
     let cancelled = false
-    const params = new URLSearchParams({ size: '8' })
+    const params = new URLSearchParams({ page: String(movementPage), size: '8' })
     if (product) {
       params.set('productId', String(product.id))
     }
@@ -57,13 +61,14 @@ export default function Inventory() {
     return () => {
       cancelled = true
     }
-  }, [product])
+  }, [product, movementPage])
 
   async function refreshProduct(id) {
     const updated = await api(`/api/products/${id}`)
     setProduct(updated)
     setMatches((current) => current.map((item) => (item.id === updated.id ? updated : item)))
-    setMovements(await api(`/api/inventory/movements?productId=${id}&size=8`))
+    setMovementPage(0)
+    setMovements(await api(`/api/inventory/movements?productId=${id}&page=0&size=8`))
   }
 
   async function receive(event) {
@@ -118,14 +123,14 @@ export default function Inventory() {
       <PageHeader
         eyebrow="Inventory"
         title="Stock only changes with a reason."
-        text="A receipt records stock arriving. An adjustment records a count, damage, or other correction. Sales deduct stock on their own."
+        text="A receipt records stock arriving. An adjustment records a count, damage, or other correction. Sales deduct stock on their own, and a return puts it back."
       />
       <Banner error={error} />
       {message && <p className="success">{message}</p>}
       <section className="panel">
         <label>
           Find a product
-          <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Name or SKU" />
+          <input value={search} onChange={(event) => { setProductPage(0); setSearch(event.target.value) }} placeholder="Name or SKU" />
         </label>
         <div className="choice-list">
           {matches.map((item) => (
@@ -133,7 +138,7 @@ export default function Inventory() {
               key={item.id}
               type="button"
               className={product?.id === item.id ? 'choice selected' : 'choice'}
-              onClick={() => setProduct(item)}
+              onClick={() => { setMovementPage(0); setProduct(item) }}
             >
               <strong>{item.name}</strong>
               <span>{item.sku} · {item.stockQuantity} on hand</span>
@@ -141,6 +146,13 @@ export default function Inventory() {
           ))}
           {matches.length === 0 && <p className="muted">No active products match that search.</p>}
         </div>
+        {productPages > 1 && (
+          <div className="row">
+            <button type="button" className="ghost" disabled={productPage === 0} onClick={() => setProductPage((current) => current - 1)}>Previous</button>
+            <span className="muted">Page {productPage + 1} of {productPages}</span>
+            <button type="button" className="ghost" disabled={productPage + 1 >= productPages} onClick={() => setProductPage((current) => current + 1)}>Next</button>
+          </div>
+        )}
       </section>
       {product && (
         <section className="split">
@@ -209,6 +221,13 @@ export default function Inventory() {
                 ))}
               </tbody>
             </table>
+          </div>
+        )}
+        {movements && movements.totalPages > 1 && (
+          <div className="row">
+            <button type="button" className="ghost" disabled={movementPage === 0} onClick={() => setMovementPage((current) => current - 1)}>Previous</button>
+            <span className="muted">Page {movementPage + 1} of {movements.totalPages}</span>
+            <button type="button" className="ghost" disabled={movementPage + 1 >= movements.totalPages} onClick={() => setMovementPage((current) => current + 1)}>Next</button>
           </div>
         )}
       </section>

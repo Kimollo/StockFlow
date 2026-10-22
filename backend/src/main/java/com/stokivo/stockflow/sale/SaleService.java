@@ -7,6 +7,8 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 import com.stokivo.stockflow.auth.CurrentUser;
 import com.stokivo.stockflow.common.ApiException;
@@ -100,6 +102,73 @@ public class SaleService {
 		return toResponse(saved);
 	}
 
+	@Transactional
+	public SaleResponse returnItems(Long saleId, ReturnRequest request) {
+		Sale sale = saleRepository.findByIdForUpdate(saleId)
+				.orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Sale not found."));
+		if (!currentUser.administrator()) {
+			Long cashierId = sale.getCashier() == null ? null : sale.getCashier().getId();
+			if (!currentUser.require().getId().equals(cashierId)) {
+				throw new ApiException(HttpStatus.FORBIDDEN, "You can only return your own sales.");
+			}
+		}
+
+		Map<Long, Integer> quantities = new LinkedHashMap<>();
+		for (ReturnLineRequest line : request.items()) {
+			quantities.merge(line.saleItemId(), line.quantity(), this::addQuantity);
+		}
+		Map<Long, SaleItem> items = sale.getItems().stream()
+				.collect(Collectors.toMap(SaleItem::getId, Function.identity()));
+		for (Map.Entry<Long, Integer> entry : quantities.entrySet()) {
+			SaleItem item = items.get(entry.getKey());
+			if (item == null) {
+				throw new ApiException(HttpStatus.BAD_REQUEST, "That line is not on this receipt.");
+			}
+			int remaining = item.getQuantity() - item.getReturnedQuantity();
+			if (remaining == 0) {
+				throw new ApiException(HttpStatus.CONFLICT, "Nothing left to return for " + item.getProductName() + ".");
+			}
+			if (entry.getValue() > remaining) {
+				throw new ApiException(
+						HttpStatus.CONFLICT,
+						"Only " + remaining + " of " + item.getProductName() + " can still be returned.");
+			}
+		}
+
+		List<Long> productIds = quantities.keySet().stream()
+				.map(itemId -> items.get(itemId).getProduct().getId())
+				.distinct()
+				.sorted()
+				.toList();
+		Map<Long, Product> products = new LinkedHashMap<>();
+		for (Long productId : productIds) {
+			Product product = productRepository.findByIdForUpdate(productId)
+					.orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Product not found."));
+			products.put(productId, product);
+		}
+
+		User actor = currentUser.require();
+		for (Map.Entry<Long, Integer> entry : quantities.entrySet()) {
+			SaleItem item = items.get(entry.getKey());
+			Product product = products.get(item.getProduct().getId());
+			int quantity = entry.getValue();
+			int updated = product.getStockQuantity() + quantity;
+			product.setStockQuantity(updated);
+			item.setReturnedQuantity(item.getReturnedQuantity() + quantity);
+			StockMovement movement = new StockMovement();
+			movement.setProduct(product);
+			movement.setSale(sale);
+			movement.setMovementType(MovementType.RETURN);
+			movement.setQuantityChange(quantity);
+			movement.setQuantityAfter(updated);
+			movement.setReason("Return " + sale.getSaleNumber());
+			movement.setRecordedBy(actor);
+			movementRepository.save(movement);
+		}
+		movementRepository.flush();
+		return toResponse(sale);
+	}
+
 	@Transactional(readOnly = true)
 	public PageResponse<SaleResponse> list(int page, int size) {
 		int safePage = Math.max(page, 0);
@@ -180,6 +249,7 @@ public class SaleService {
 						item.getSku(),
 						item.getProductName(),
 						item.getQuantity(),
+						item.getReturnedQuantity(),
 						item.getUnitPrice(),
 						item.getLineTotal()))
 				.toList();

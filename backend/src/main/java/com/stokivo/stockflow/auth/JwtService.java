@@ -34,6 +34,7 @@ public class JwtService {
 		return Jwts.builder()
 				.subject(user.getUsername())
 				.claim("role", user.getRole().name())
+				.claim("ver", user.getCredentialsVersion())
 				.issuedAt(Date.from(now))
 				.expiration(Date.from(now.plusSeconds(ttlHours * 3600)))
 				.signWith(key)
@@ -50,6 +51,26 @@ public class JwtService {
 			return claims.getSubject();
 		} catch (JwtException | IllegalArgumentException exception) {
 			return null;
+		}
+	}
+
+	public int credentialsVersion(String token) {
+		try {
+			Claims claims = Jwts.parser()
+					.verifyWith(key)
+					.build()
+					.parseSignedClaims(token)
+					.getPayload();
+			Object version = claims.get("ver");
+			if (version == null) {
+				return 0;
+			}
+			if (version instanceof Number number) {
+				return number.intValue();
+			}
+			return -1;
+		} catch (JwtException | IllegalArgumentException exception) {
+			return -1;
 		}
 	}
 }

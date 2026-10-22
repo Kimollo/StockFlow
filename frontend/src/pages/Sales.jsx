@@ -7,6 +7,8 @@ export default function Sales({ ownOnly = false }) {
   const [sales, setSales] = useState(null)
   const [page, setPage] = useState(0)
   const [selected, setSelected] = useState(null)
+  const [returnQty, setReturnQty] = useState({})
+  const [returning, setReturning] = useState(false)
   const [error, setError] = useState(null)
   const [loading, setLoading] = useState(true)
 
@@ -36,10 +38,36 @@ export default function Sales({ ownOnly = false }) {
 
   async function open(sale) {
     setError(null)
+    setReturnQty({})
     try {
       setSelected(await api(`/api/sales/${sale.id}`))
     } catch (err) {
       setError(err)
+    }
+  }
+
+  async function submitReturn(event) {
+    event.preventDefault()
+    const items = selected.items
+      .map((item) => ({ saleItemId: item.id, quantity: Number(returnQty[item.id] || 0) }))
+      .filter((item) => item.quantity > 0)
+    if (items.length === 0) {
+      setError(new Error('Choose a quantity to return.'))
+      return
+    }
+    setReturning(true)
+    setError(null)
+    try {
+      const updated = await api(`/api/sales/${selected.id}/returns`, {
+        method: 'POST',
+        body: JSON.stringify({ items }),
+      })
+      setSelected(updated)
+      setReturnQty({})
+    } catch (err) {
+      setError(err)
+    } finally {
+      setReturning(false)
     }
   }
 
@@ -95,6 +123,29 @@ export default function Sales({ ownOnly = false }) {
         )}
       </section>
       {selected && <Receipt sale={selected} />}
+      {selected && selected.items.some((item) => item.quantity - item.returnedQuantity > 0) && (
+        <form className="panel" onSubmit={submitReturn}>
+          <h3>Return stock</h3>
+          <p className="muted">The receipt stays as it was sold. Returned quantities go back on the shelf.</p>
+          {selected.items.filter((item) => item.quantity - item.returnedQuantity > 0).map((item) => {
+            const remaining = item.quantity - item.returnedQuantity
+            return (
+              <label key={item.id}>
+                {item.productName} · {remaining} still out
+                <input
+                  type="number"
+                  min="0"
+                  max={remaining}
+                  value={returnQty[item.id] ?? ''}
+                  placeholder="0"
+                  onChange={(event) => setReturnQty((current) => ({ ...current, [item.id]: event.target.value }))}
+                />
+              </label>
+            )
+          })}
+          <button className="primary" type="submit" disabled={returning}>{returning ? 'Returning…' : 'Return selected'}</button>
+        </form>
+      )}
     </>
   )
 }
