@@ -166,8 +166,12 @@ main {
 
 .split {
   display: grid;
-  grid-template-columns: 1.2fr 0.8fr;
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 0.8fr);
   gap: 16px;
+}
+
+.split > * {
+  min-width: 0;
 }
 
 .panel,
@@ -251,8 +255,7 @@ select {
 
 .field-row,
 .filters,
-.row,
-.cart-line {
+.row {
   display: flex;
   gap: 12px;
   align-items: end;
@@ -378,12 +381,29 @@ td {
 }
 
 .cart-line {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
   align-items: center;
-  justify-content: space-between;
+  gap: 12px;
+  min-width: 0;
+}
+
+.cart-line > div {
+  min-width: 0;
+}
+
+.cart-line strong,
+.cart-line span {
+  display: block;
+}
+
+.cart-line input,
+.cart-line .ghost {
+  flex: 0 0 auto;
 }
 
 .cart-line input {
-  width: 80px;
+  width: 4.5rem;
 }
 
 .total {

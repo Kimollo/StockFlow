@@ -12,6 +12,8 @@ The API is Spring Boot. The shop screens are React. PostgreSQL stores products, 
 
 ![Checkout](docs/screenshots/checkout.png)
 
+The pictures are from a shop that already has stock and sales. A fresh database starts empty.
+
 ## What it does
 
 - Products have a unique SKU, a category, a selling price, a cost price, and a minimum stock level. Deactivating a product keeps it on old receipts.
@@ -79,7 +81,7 @@ Defaults live in `backend/src/main/resources/application.yaml`. Override them wi
 | `STOCKFLOW_ADMIN_USERNAME` | `admin` | First administrator, only when no users exist |
 | `STOCKFLOW_ADMIN_PASSWORD` | `stockflow` | First administrator password |
 
-Change the JWT secret and the administrator password before you put this anywhere other people can reach. The development defaults are in the repository.
+Set `STOCKFLOW_JWT_SECRET` and `STOCKFLOW_ADMIN_PASSWORD` before the first start if anyone else will be able to reach the app. The administrator password is saved on that first start. The development defaults are in the repository.
 
 ## Tests
 
