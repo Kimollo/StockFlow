@@ -2,17 +2,24 @@ spring:
   application:
     name: stockflow
   datasource:
-    url: ${STOCKFLOW_DB_URL:jdbc:postgresql://localhost:5432/stockflow}
+    url: ${STOCKFLOW_DB_URL:jdbc:postgresql://localhost:5432/stockflow_app}
     username: ${STOCKFLOW_DB_USERNAME:helpdesk}
     password: ${STOCKFLOW_DB_PASSWORD:helpdesk}
   jpa:
     open-in-view: false
     hibernate:
-      ddl-auto: none
+      ddl-auto: validate
     properties:
       hibernate:
         jdbc:
           time_zone: UTC
+        type:
+          preferred_instant_jdbc_type: TIMESTAMP_UTC
+  flyway:
+    enabled: true
+  jackson:
+    serialization:
+      write-dates-as-timestamps: false
 
 server:
   port: 8080
