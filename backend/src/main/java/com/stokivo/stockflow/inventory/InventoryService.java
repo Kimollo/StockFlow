@@ -78,6 +78,7 @@ public class InventoryService {
 				movement.getQuantityChange(),
 				movement.getQuantityAfter(),
 				movement.getReason(),
+				movement.getSale() == null ? null : movement.getSale().getId(),
 				movement.getCreatedAt());
 	}
 

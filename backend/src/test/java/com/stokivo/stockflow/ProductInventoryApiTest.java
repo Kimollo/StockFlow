@@ -4,6 +4,8 @@ import com.jayway.jsonpath.JsonPath;
 import com.stokivo.stockflow.category.CategoryRepository;
 import com.stokivo.stockflow.inventory.StockMovementRepository;
 import com.stokivo.stockflow.product.ProductRepository;
+import com.stokivo.stockflow.sale.SaleItemRepository;
+import com.stokivo.stockflow.sale.SaleRepository;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -36,9 +38,17 @@ class ProductInventoryApiTest extends EmbeddedPostgresSupport {
 	@Autowired
 	private StockMovementRepository movements;
 
+	@Autowired
+	private SaleItemRepository saleItems;
+
+	@Autowired
+	private SaleRepository sales;
+
 	@BeforeEach
 	void cleanDatabase() {
 		movements.deleteAll();
+		saleItems.deleteAll();
+		sales.deleteAll();
 		products.deleteAll();
 		categories.deleteAll();
 	}

@@ -11,6 +11,7 @@ public record StockMovementResponse(
 		int quantityChange,
 		int stockAfter,
 		String reason,
+		Long saleId,
 		Instant createdAt
 ) {
 }

@@ -3,6 +3,7 @@ package com.stokivo.stockflow.inventory;
 import java.time.Instant;
 
 import com.stokivo.stockflow.product.Product;
+import com.stokivo.stockflow.sale.Sale;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -28,6 +29,10 @@ public class StockMovement {
 	@ManyToOne(optional = false, fetch = FetchType.LAZY)
 	@JoinColumn(name = "product_id", nullable = false)
 	private Product product;
+
+	@ManyToOne(fetch = FetchType.LAZY)
+	@JoinColumn(name = "sale_id")
+	private Sale sale;
 
 	@Enumerated(EnumType.STRING)
 	@Column(name = "movement_type", nullable = false, length = 20)
@@ -60,6 +65,14 @@ public class StockMovement {
 
 	public void setProduct(Product product) {
 		this.product = product;
+	}
+
+	public Sale getSale() {
+		return sale;
+	}
+
+	public void setSale(Sale sale) {
+		this.sale = sale;
 	}
 
 	public MovementType getMovementType() {
