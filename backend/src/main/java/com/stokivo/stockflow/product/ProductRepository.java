@@ -16,6 +16,15 @@ public interface ProductRepository extends JpaRepository<Product, Long>, JpaSpec
 
 	boolean existsBySkuIgnoreCaseAndIdNot(String sku, Long id);
 
+	long countByActiveTrue();
+
+	@Query("""
+			select count(product)
+			from Product product
+			where product.active = true and product.stockQuantity <= product.minimumStockLevel
+			""")
+	long countActiveLowStock();
+
 	@Lock(LockModeType.PESSIMISTIC_WRITE)
 	@Query("select product from Product product where product.id = :id")
 	Optional<Product> findByIdForUpdate(@Param("id") Long id);

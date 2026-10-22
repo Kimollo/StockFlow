@@ -1,45 +1,29 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
+import Dashboard from './pages/Dashboard.jsx'
+import Products from './pages/Products.jsx'
+import Inventory from './pages/Inventory.jsx'
+import Checkout from './pages/Checkout.jsx'
+import Sales from './pages/Sales.jsx'
 
-const modules = [
-  { name: 'Products', detail: 'SKUs, prices, and categories' },
-  { name: 'Inventory', detail: 'Receipts, adjustments, and history' },
-  { name: 'Sales', detail: 'Checkout, receipts, and stock deduction' },
-  { name: 'Reports', detail: 'Dashboard totals and charts' },
-  { name: 'Staff', detail: 'Login and administrator permissions' },
+const pages = [
+  { id: 'dashboard', label: 'Dashboard', detail: 'Today and the period' },
+  { id: 'products', label: 'Products', detail: 'SKUs, prices, categories' },
+  { id: 'inventory', label: 'Inventory', detail: 'Receipts and adjustments' },
+  { id: 'checkout', label: 'Checkout', detail: 'Sell and keep a receipt' },
+  { id: 'sales', label: 'Sales', detail: 'History that stays put' },
 ]
 
+const views = {
+  dashboard: Dashboard,
+  products: Products,
+  inventory: Inventory,
+  checkout: Checkout,
+  sales: Sales,
+}
+
 export default function App() {
-  const [health, setHealth] = useState(null)
-  const [error, setError] = useState(null)
-
-  useEffect(() => {
-    let cancelled = false
-
-    fetch('/api/health')
-      .then(async (response) => {
-        if (!response.ok) {
-          throw new Error(`API returned ${response.status}`)
-        }
-        return response.json()
-      })
-      .then((body) => {
-        if (!cancelled) {
-          setHealth(body)
-        }
-      })
-      .catch((err) => {
-        if (!cancelled) {
-          setError(err.message || 'The API is not reachable')
-        }
-      })
-
-    return () => {
-      cancelled = true
-    }
-  }, [])
-
-  const apiUp = health?.status === 'UP'
-  const databaseUp = health?.database === 'UP'
+  const [page, setPage] = useState('dashboard')
+  const Current = views[page]
 
   return (
     <div className="shell">
@@ -51,38 +35,24 @@ export default function App() {
             <h1>StockFlow</h1>
           </div>
         </div>
-        <p className="aside-copy">Inventory and sales for a small shop. Phase 1 is the foundation.</p>
+        <p className="aside-copy">Inventory and sales for a small shop.</p>
         <nav>
-          {modules.map((module) => (
-            <div key={module.name} className="nav-item">
-              <strong>{module.name}</strong>
-              <span>{module.detail}</span>
-            </div>
+          {pages.map((item) => (
+            <button
+              key={item.id}
+              type="button"
+              className={page === item.id ? 'nav-item current' : 'nav-item'}
+              aria-current={page === item.id ? 'page' : undefined}
+              onClick={() => setPage(item.id)}
+            >
+              <strong>{item.label}</strong>
+              <span>{item.detail}</span>
+            </button>
           ))}
         </nav>
       </aside>
       <main>
-        <header>
-          <p className="eyebrow">Phase 1</p>
-          <h2>The shop system is connected.</h2>
-          <p>React is talking to the Spring Boot API, and the API is talking to PostgreSQL.</p>
-        </header>
-        <section className="status-grid">
-          <article>
-            <p>API</p>
-            <strong className={apiUp ? 'up' : error ? 'down' : 'wait'}>
-              {apiUp ? 'Running' : error ? 'Unreachable' : 'Checking'}
-            </strong>
-            <span>{apiUp ? health.application : error || 'Waiting for /api/health'}</span>
-          </article>
-          <article>
-            <p>PostgreSQL</p>
-            <strong className={databaseUp ? 'up' : error ? 'down' : 'wait'}>
-              {databaseUp ? 'Connected' : error ? 'Unknown' : 'Checking'}
-            </strong>
-            <span>{databaseUp ? 'stockflow database' : 'Connection is still being confirmed'}</span>
-          </article>
-        </section>
+        <Current />
       </main>
     </div>
   )
