@@ -3,7 +3,7 @@ import { api, money, when } from '../api.js'
 import { Receipt } from './Checkout.jsx'
 import { Banner, PageHeader } from '../ui.jsx'
 
-export default function Sales() {
+export default function Sales({ ownOnly = false }) {
   const [sales, setSales] = useState(null)
   const [page, setPage] = useState(0)
   const [selected, setSelected] = useState(null)
@@ -48,7 +48,9 @@ export default function Sales() {
       <PageHeader
         eyebrow="Sales"
         title="Receipts stay as they were sold."
-        text="A later price change or a deactivated product does not rewrite these lines."
+        text={ownOnly
+          ? 'These are the sales you completed.'
+          : 'A later price change or a deactivated product does not rewrite these lines.'}
       />
       <Banner error={error} />
       <section className="panel">
@@ -62,6 +64,7 @@ export default function Sales() {
                   <th>Receipt</th>
                   <th>When</th>
                   <th>Payment</th>
+                  <th>Cashier</th>
                   <th>Items</th>
                   <th>Total</th>
                   <th></th>
@@ -73,6 +76,7 @@ export default function Sales() {
                     <td>{sale.saleNumber}</td>
                     <td>{when(sale.soldAt)}</td>
                     <td>{sale.paymentMethod}</td>
+                    <td>{sale.cashierName || '—'}</td>
                     <td>{sale.items.length}</td>
                     <td>{money(sale.total)}</td>
                     <td><button type="button" className="ghost" onClick={() => open(sale)}>View</button></td>

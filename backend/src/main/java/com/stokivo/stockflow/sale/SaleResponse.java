@@ -12,6 +12,7 @@ public record SaleResponse(
 		BigDecimal subtotal,
 		BigDecimal total,
 		Instant soldAt,
+		String cashierName,
 		List<SaleItemResponse> items
 ) {
 }

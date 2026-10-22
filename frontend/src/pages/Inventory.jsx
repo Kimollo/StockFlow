@@ -191,6 +191,7 @@ export default function Inventory() {
                   <th>Type</th>
                   <th>Change</th>
                   <th>After</th>
+                  <th>By</th>
                   <th>Reason</th>
                 </tr>
               </thead>
@@ -202,6 +203,7 @@ export default function Inventory() {
                     <td>{movement.type}</td>
                     <td>{movement.quantityChange > 0 ? `+${movement.quantityChange}` : movement.quantityChange}</td>
                     <td>{movement.stockAfter}</td>
+                    <td>{movement.recordedByName || '—'}</td>
                     <td>{movement.reason || '—'}</td>
                   </tr>
                 ))}

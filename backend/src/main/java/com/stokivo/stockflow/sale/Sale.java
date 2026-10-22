@@ -10,13 +10,18 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
+import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.OrderBy;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
+
+import com.stokivo.stockflow.user.User;
 
 @Entity
 @Table(name = "sales")
@@ -45,6 +50,10 @@ public class Sale {
 
 	@Column(name = "sold_at", nullable = false)
 	private Instant soldAt;
+
+	@ManyToOne(fetch = FetchType.LAZY)
+	@JoinColumn(name = "cashier_id")
+	private User cashier;
 
 	@OneToMany(mappedBy = "sale", cascade = CascadeType.ALL, orphanRemoval = true)
 	@OrderBy("id")
@@ -112,6 +121,14 @@ public class Sale {
 
 	public void setSoldAt(Instant soldAt) {
 		this.soldAt = soldAt;
+	}
+
+	public User getCashier() {
+		return cashier;
+	}
+
+	public void setCashier(User cashier) {
+		this.cashier = cashier;
 	}
 
 	public List<SaleItem> getItems() {

@@ -184,7 +184,7 @@ export function Receipt({ sale }) {
     <section className="panel receipt">
       <p className="eyebrow">Receipt</p>
       <h3>{sale.saleNumber}</h3>
-      <p className="muted">{sale.paymentMethod} · {sale.status}</p>
+      <p className="muted">{sale.paymentMethod} · {sale.status}{sale.cashierName ? ` · ${sale.cashierName}` : ''}</p>
       <div className="table-wrap">
         <table>
           <thead>

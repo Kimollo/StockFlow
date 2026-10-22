@@ -1,9 +1,26 @@
+let token = null
+let onSignedOut = () => {}
+
+export function setToken(next) {
+  token = next || null
+}
+
+export function onUnauthorized(handler) {
+  onSignedOut = handler
+}
+
 export async function api(path, options = {}) {
   const headers = { ...(options.headers || {}) }
   if (options.body && !headers['Content-Type']) {
     headers['Content-Type'] = 'application/json'
   }
+  if (token) {
+    headers.Authorization = `Bearer ${token}`
+  }
   const response = await fetch(path, { ...options, headers })
+  if (response.status === 401 && !path.startsWith('/api/auth/login')) {
+    onSignedOut()
+  }
   if (response.status === 204) {
     return null
   }

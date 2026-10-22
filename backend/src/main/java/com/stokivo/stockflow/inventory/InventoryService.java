@@ -1,5 +1,6 @@
 package com.stokivo.stockflow.inventory;
 
+import com.stokivo.stockflow.auth.CurrentUser;
 import com.stokivo.stockflow.common.ApiException;
 import com.stokivo.stockflow.common.PageResponse;
 import com.stokivo.stockflow.product.Product;
@@ -15,10 +16,15 @@ public class InventoryService {
 
 	private final ProductRepository productRepository;
 	private final StockMovementRepository movementRepository;
+	private final CurrentUser currentUser;
 
-	public InventoryService(ProductRepository productRepository, StockMovementRepository movementRepository) {
+	public InventoryService(
+			ProductRepository productRepository,
+			StockMovementRepository movementRepository,
+			CurrentUser currentUser) {
 		this.productRepository = productRepository;
 		this.movementRepository = movementRepository;
+		this.currentUser = currentUser;
 	}
 
 	@Transactional
@@ -64,6 +70,7 @@ public class InventoryService {
 		movement.setQuantityChange(change);
 		movement.setQuantityAfter(stockAfter);
 		movement.setReason(reason);
+		movement.setRecordedBy(currentUser.require());
 		return movement;
 	}
 
@@ -79,6 +86,7 @@ public class InventoryService {
 				movement.getQuantityAfter(),
 				movement.getReason(),
 				movement.getSale() == null ? null : movement.getSale().getId(),
+				movement.getRecordedBy() == null ? null : movement.getRecordedBy().getName(),
 				movement.getCreatedAt());
 	}
 

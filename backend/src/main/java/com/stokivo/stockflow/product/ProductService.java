@@ -5,6 +5,7 @@ import java.math.RoundingMode;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.stokivo.stockflow.auth.CurrentUser;
 import com.stokivo.stockflow.category.Category;
 import com.stokivo.stockflow.category.CategoryRepository;
 import com.stokivo.stockflow.common.ApiException;
@@ -27,14 +28,17 @@ public class ProductService {
 	private final ProductRepository productRepository;
 	private final CategoryRepository categoryRepository;
 	private final InventoryService inventoryService;
+	private final CurrentUser currentUser;
 
 	public ProductService(
 			ProductRepository productRepository,
 			CategoryRepository categoryRepository,
-			InventoryService inventoryService) {
+			InventoryService inventoryService,
+			CurrentUser currentUser) {
 		this.productRepository = productRepository;
 		this.categoryRepository = categoryRepository;
 		this.inventoryService = inventoryService;
+		this.currentUser = currentUser;
 	}
 
 	@Transactional(readOnly = true)
@@ -128,7 +132,7 @@ public class ProductService {
 				product.getCategory().getId(),
 				product.getCategory().getName(),
 				product.getSellingPrice(),
-				product.getCostPrice(),
+				currentUser.administrator() ? product.getCostPrice() : null,
 				stock,
 				minimum,
 				product.isActive(),

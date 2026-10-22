@@ -27,3 +27,10 @@ server:
 stockflow:
   cors:
     allowed-origins: http://localhost:5173,http://127.0.0.1:5173
+  jwt:
+    secret: ${STOCKFLOW_JWT_SECRET:stockflow-dev-signing-key-change-before-deploy}
+    ttl-hours: 12
+  admin:
+    name: Shop owner
+    username: ${STOCKFLOW_ADMIN_USERNAME:admin}
+    password: ${STOCKFLOW_ADMIN_PASSWORD:stockflow}

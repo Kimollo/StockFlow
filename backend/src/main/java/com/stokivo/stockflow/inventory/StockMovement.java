@@ -5,6 +5,8 @@ import java.time.Instant;
 import com.stokivo.stockflow.product.Product;
 import com.stokivo.stockflow.sale.Sale;
 
+import com.stokivo.stockflow.user.User;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -33,6 +35,10 @@ public class StockMovement {
 	@ManyToOne(fetch = FetchType.LAZY)
 	@JoinColumn(name = "sale_id")
 	private Sale sale;
+
+	@ManyToOne(fetch = FetchType.LAZY)
+	@JoinColumn(name = "user_id")
+	private User recordedBy;
 
 	@Enumerated(EnumType.STRING)
 	@Column(name = "movement_type", nullable = false, length = 20)
@@ -73,6 +79,14 @@ public class StockMovement {
 
 	public void setSale(Sale sale) {
 		this.sale = sale;
+	}
+
+	public User getRecordedBy() {
+		return recordedBy;
+	}
+
+	public void setRecordedBy(User recordedBy) {
+		this.recordedBy = recordedBy;
 	}
 
 	public MovementType getMovementType() {

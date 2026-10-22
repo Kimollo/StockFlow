@@ -8,6 +8,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+import com.stokivo.stockflow.auth.CurrentUser;
 import com.stokivo.stockflow.common.ApiException;
 import com.stokivo.stockflow.common.PageResponse;
 import com.stokivo.stockflow.inventory.MovementType;
@@ -15,6 +16,7 @@ import com.stokivo.stockflow.inventory.StockMovement;
 import com.stokivo.stockflow.inventory.StockMovementRepository;
 import com.stokivo.stockflow.product.Product;
 import com.stokivo.stockflow.product.ProductRepository;
+import com.stokivo.stockflow.user.User;
 
 import jakarta.persistence.EntityManager;
 
@@ -33,16 +35,19 @@ public class SaleService {
 	private final ProductRepository productRepository;
 	private final StockMovementRepository movementRepository;
 	private final EntityManager entityManager;
+	private final CurrentUser currentUser;
 
 	public SaleService(
 			SaleRepository saleRepository,
 			ProductRepository productRepository,
 			StockMovementRepository movementRepository,
-			EntityManager entityManager) {
+			EntityManager entityManager,
+			CurrentUser currentUser) {
 		this.saleRepository = saleRepository;
 		this.productRepository = productRepository;
 		this.movementRepository = movementRepository;
 		this.entityManager = entityManager;
+		this.currentUser = currentUser;
 	}
 
 	@Transactional
@@ -55,6 +60,8 @@ public class SaleService {
 		sale.setPaymentMethod(request.paymentMethod());
 		sale.setStatus(SaleStatus.COMPLETED);
 		sale.setSoldAt(Instant.now());
+		User cashier = currentUser.require();
+		sale.setCashier(cashier);
 
 		BigDecimal subtotal = money(BigDecimal.ZERO);
 		for (Product product : products) {
@@ -86,6 +93,7 @@ public class SaleService {
 			movement.setQuantityChange(-quantity);
 			movement.setQuantityAfter(updated);
 			movement.setReason("Sale " + saved.getSaleNumber());
+			movement.setRecordedBy(cashier);
 			movementRepository.save(movement);
 		}
 		movementRepository.flush();
@@ -96,17 +104,27 @@ public class SaleService {
 	public PageResponse<SaleResponse> list(int page, int size) {
 		int safePage = Math.max(page, 0);
 		int safeSize = size <= 0 ? 20 : Math.min(size, 100);
-		var results = saleRepository.findAll(PageRequest.of(
+		var pageable = PageRequest.of(
 				safePage,
 				safeSize,
-				Sort.by(Sort.Order.desc("soldAt"), Sort.Order.desc("id"))));
+				Sort.by(Sort.Order.desc("soldAt"), Sort.Order.desc("id")));
+		var results = currentUser.administrator()
+				? saleRepository.findAll(pageable)
+				: saleRepository.findByCashier_Id(currentUser.require().getId(), pageable);
 		return PageResponse.from(results.map(this::toResponse));
 	}
 
 	@Transactional(readOnly = true)
 	public SaleResponse get(Long id) {
-		return toResponse(saleRepository.findById(id)
-				.orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Sale not found.")));
+		Sale sale = saleRepository.findById(id)
+				.orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Sale not found."));
+		if (!currentUser.administrator()) {
+			Long cashierId = sale.getCashier() == null ? null : sale.getCashier().getId();
+			if (!currentUser.require().getId().equals(cashierId)) {
+				throw new ApiException(HttpStatus.FORBIDDEN, "You can only view your own sales.");
+			}
+		}
+		return toResponse(sale);
 	}
 
 	private List<Product> lockProducts(Map<Long, Integer> quantities) {
@@ -173,6 +191,7 @@ public class SaleService {
 				sale.getSubtotal(),
 				sale.getTotal(),
 				sale.getSoldAt(),
+				sale.getCashier() == null ? null : sale.getCashier().getName(),
 				items);
 	}
 

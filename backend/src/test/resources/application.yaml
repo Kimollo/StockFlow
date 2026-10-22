@@ -9,3 +9,10 @@ spring:
 stockflow:
   cors:
     allowed-origins: http://localhost:5173
+  jwt:
+    secret: stockflow-test-signing-key-not-for-production
+    ttl-hours: 12
+  admin:
+    name: Shop owner
+    username: admin
+    password: stockflow

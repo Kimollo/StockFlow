@@ -12,7 +12,7 @@ const emptyForm = {
   minimumStockLevel: '0',
 }
 
-export default function Products() {
+export default function Products({ canManage = true }) {
   const [products, setProducts] = useState(null)
   const [categories, setCategories] = useState([])
   const [search, setSearch] = useState('')
@@ -171,9 +171,12 @@ export default function Products() {
       <PageHeader
         eyebrow="Products"
         title="What the shop sells."
-        text="Deactivating a product keeps it on old receipts. Stock changes happen in Inventory, not in this form."
+        text={canManage
+          ? 'Deactivating a product keeps it on old receipts. Stock changes happen in Inventory, not in this form.'
+          : 'Prices and stock levels for what is on the shelf. A manager changes the catalog.'}
       />
       <Banner error={error} />
+      {canManage && (
       <section className="split">
         <form className="panel" onSubmit={saveProduct}>
           <h3>{editingId ? 'Edit product' : 'New product'}</h3>
@@ -230,6 +233,7 @@ export default function Products() {
           <button className="ghost" type="submit">Add category</button>
         </form>
       </section>
+      )}
       <section className="panel">
         <div className="filters">
           <input
@@ -281,12 +285,14 @@ export default function Products() {
                     <td>{money(product.sellingPrice)}</td>
                     <td>{product.stockQuantity}</td>
                     <td><span className={badgeClass(product)}>{badge(product)}</span></td>
-                    <td className="actions">
-                      <button type="button" className="ghost" onClick={() => edit(product)}>Edit</button>
-                      <button type="button" className="ghost" onClick={() => changeStatus(product)}>
-                        {product.active ? 'Deactivate' : 'Activate'}
-                      </button>
-                    </td>
+                    {canManage && (
+                      <td className="actions">
+                        <button type="button" className="ghost" onClick={() => edit(product)}>Edit</button>
+                        <button type="button" className="ghost" onClick={() => changeStatus(product)}>
+                          {product.active ? 'Deactivate' : 'Activate'}
+                        </button>
+                      </td>
+                    )}
                   </tr>
                 ))}
               </tbody>
